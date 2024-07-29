@@ -1,5 +1,10 @@
 ## 0.1.1 (Unreleased)
 
+Features:
+
+- allow schedules to be imported.
+- made schedule payloads optional.
+
 Fixes:
 
 - improved documentations.

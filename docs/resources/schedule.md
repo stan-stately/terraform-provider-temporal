@@ -60,10 +60,13 @@ resource "temporal_schedule" "example" {
 
 Required:
 
-- `input_payload` (String) Input payload passed to the workflow execution.
 - `task_queue_name` (String) Name of the queue in which the workflow execution will be placed.
 - `workflow_id` (String) ID given to the workflow execution this schedule starts.
 - `workflow_type` (String) Name of the workflow definition this schedule starts.
+
+Optional:
+
+- `input_payload` (String) Input payload passed to the workflow execution. Must be a valid JSON string.
 
 
 <a id="nestedblock--spec"></a>

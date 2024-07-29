@@ -112,12 +112,17 @@ func parseScheduleResource(name string, response *workflowservice.DescribeSchedu
 		})
 	}
 
+	inputPayload := basetypes.StringValue{}
+	if len(actionDetails.GetInput().GetPayloads()) > 0 {
+		inputPayload = types.StringValue(string(actionDetails.GetInput().GetPayloads()[0].GetData()))
+	}
+
 	return &scheduleResourceModel{
 		Name:           types.StringValue(name),
 		IsPaused:       types.BoolValue(response.GetSchedule().GetState().GetPaused()),
 		PauseOnFailure: types.BoolValue(response.GetSchedule().GetPolicies().GetPauseOnFailure()),
 		Action: scheduleActionModel{
-			InputPayload:  types.StringValue(string(actionDetails.GetInput().GetPayloads()[0].GetData())),
+			InputPayload:  inputPayload,
 			WorkflowId:    types.StringValue(actionDetails.GetWorkflowId()),
 			WorkflowType:  types.StringValue(actionDetails.GetWorkflowType().GetName()),
 			TaskQueueName: types.StringValue(actionDetails.GetTaskQueue().GetName()),
@@ -216,8 +221,8 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Required:    true,
 					},
 					"input_payload": schema.StringAttribute{
-						Description: "Input payload passed to the workflow execution.",
-						Required:    true, // TODO make it optional
+						Description: "Input payload passed to the workflow execution. Must be a valid JSON string.",
+						Optional:    true,
 					},
 				},
 				Description: "Details about the action this schedule triggers.",
@@ -273,12 +278,16 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	argsString := data.Action.InputPayload.ValueString()
-	var args map[string]interface{}
-	err := json.Unmarshal([]byte(argsString), &args)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid input_payload", err.Error())
-		return
+	var args = make([]interface{}, 0)
+	if !data.Action.InputPayload.IsNull() {
+		var d map[string]interface{}
+		argsString := data.Action.InputPayload.ValueString()
+		err := json.Unmarshal([]byte(argsString), &d)
+		if err != nil {
+			resp.Diagnostics.AddError("Invalid input_payload", err.Error())
+			return
+		}
+		args = []interface{}{d}
 	}
 
 	intervals := make([]temporal.ScheduleIntervalSpec, 0)
@@ -320,7 +329,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 			ID:        data.Action.WorkflowId.ValueString(),
 			Workflow:  data.Action.WorkflowType.ValueString(),
 			TaskQueue: data.Action.TaskQueueName.ValueString(),
-			Args:      []interface{}{args},
+			Args:      args,
 		},
 		Overlap:        stringToScheduleOverlapPolicy(data.OverlapPolicy.ValueString()),
 		CatchupWindow:  catchupWindow,
