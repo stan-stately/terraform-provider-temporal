@@ -491,5 +491,5 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 func (r *scheduleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	panic("To implement")
+	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
