@@ -1,6 +1,6 @@
 module terraform-provider-temporal
 
-go 1.21
+go 1.24.6
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.19.4
