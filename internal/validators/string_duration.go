@@ -2,8 +2,9 @@ package validators
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"strconv"
+
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 type StringDurationValidator struct {
@@ -35,8 +36,7 @@ func (v StringDurationValidator) ValidateString(ctx context.Context, req validat
 		}
 	}
 	resp.Diagnostics.AddError(
-		"Invalid Value at " + req.PathExpression.String(),
+		"Invalid Value at "+req.PathExpression.String(),
 		"The value must represent a duration. E.g 30s, 5m, 10h or 8d.",
 	)
-	return
 }

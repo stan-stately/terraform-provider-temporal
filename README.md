@@ -7,3 +7,22 @@ The Temporal Terraform Provider allows you to manage [Temporal](https://temporal
 ## Usage
 
 See usage and examples on <https://registry.terraform.io/providers/PGBI/temporal>.
+
+### Dev tools
+
+```bash
+# Build the provider
+make build
+
+# Run linter
+make lint
+
+# Run tests
+make test
+
+# Run acceptance tests
+make testacc
+
+# Clean up
+make clean
+```

@@ -5,12 +5,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"os"
+	"strconv"
+
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"os"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -24,11 +25,27 @@ var (
 	_ provider.Provider = &temporalProvider{}
 )
 
+// apiKeyCredentials implements credentials.PerRPCCredentials for API key authentication.
+type apiKeyCredentials struct {
+	apiKey string
+}
+
+func (c *apiKeyCredentials) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+	return map[string]string{
+		"authorization": "Bearer " + c.apiKey,
+	}, nil
+}
+
+func (c *apiKeyCredentials) RequireTransportSecurity() bool {
+	return true
+}
+
 // temporalProviderModel maps provider schema data to a Go type.
 type temporalProviderModel struct {
 	Address   types.String `tfsdk:"address"`
 	Namespace types.String `tfsdk:"namespace"`
 	TLS       types.Bool   `tfsdk:"tls"`
+	APIKey    types.String `tfsdk:"api_key"`
 }
 
 type providerConfig struct {
@@ -72,6 +89,11 @@ func (p *temporalProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 			"tls": schema.BoolAttribute{
 				Optional:            true,
 				MarkdownDescription: "Whether to use TLS for the Temporal server connection. Defaults to `false`.",
+			},
+			"api_key": schema.StringAttribute{
+				Optional:            true,
+				Sensitive:           true,
+				MarkdownDescription: "API key for Temporal Cloud authentication. Can also be set via the `TEMPORAL_API_KEY` environment variable.",
 			},
 		},
 	}
@@ -117,6 +139,12 @@ func (p *temporalProvider) Configure(ctx context.Context, req provider.Configure
 		namespace = os.Getenv("TEMPORAL_NAMESPACE")
 	}
 
+	// Get API key from configuration or environment variable
+	apiKey := os.Getenv("TEMPORAL_API_KEY")
+	if !config.APIKey.IsNull() {
+		apiKey = config.APIKey.ValueString()
+	}
+
 	// If any of the expected configurations are missing, return
 	// errors with provider-specific guidance.
 
@@ -135,7 +163,18 @@ func (p *temporalProvider) Configure(ctx context.Context, req provider.Configure
 		HostPort:  address,
 		Namespace: namespace,
 	}
-	if tlsEnabled {
+
+	// Configure gRPC dial options
+	var dialOptions []grpc.DialOption
+
+	// Add API key authentication if provided (for Temporal Cloud)
+	if apiKey != "" {
+		apiKeyCreds := &apiKeyCredentials{apiKey: apiKey}
+		dialOptions = append(dialOptions, grpc.WithPerRPCCredentials(apiKeyCreds))
+	}
+
+	// Add TLS if enabled or if API key is provided (API key requires TLS for security)
+	if tlsEnabled || apiKey != "" {
 		pool, err := x509.SystemCertPool()
 		if err != nil {
 			resp.Diagnostics.AddError("Couldn't load the system CA certificate pool", err.Error())
@@ -144,13 +183,14 @@ func (p *temporalProvider) Configure(ctx context.Context, req provider.Configure
 		creds := credentials.NewTLS(&tls.Config{
 			RootCAs: pool,
 		})
-		dialOptions := []grpc.DialOption{
-			grpc.WithTransportCredentials(creds),
-		}
-		clientOptions.ConnectionOptions = client.ConnectionOptions{
-			DialOptions: dialOptions,
-		}
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(creds))
 	}
+
+	// Set connection options if we have any dial options
+	clientOptions.ConnectionOptions = client.ConnectionOptions{
+		DialOptions: dialOptions,
+	}
+
 	temporalClient, err := client.Dial(clientOptions)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to establish a connection with the Temporal server on "+address, err.Error())
