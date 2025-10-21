@@ -8,7 +8,7 @@ build:
 # Run linter
 .PHONY: lint
 lint:
-	golangci-lint run
+	go tool -modfile=golangci-lint.mod golangci-lint run
 
 # Run tests
 .PHONY: test

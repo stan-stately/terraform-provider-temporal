@@ -20,10 +20,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
-          go-version-file: "go.mod"
+          go-version-file: "golangci-lint.mod"
           cache: true
-      - uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # 6.5.2
-        with:
-          version: v1.64.8
       - name: Run Go linter
         run: make lint
