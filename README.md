@@ -6,7 +6,15 @@ The Temporal Terraform Provider allows you to manage [Temporal](https://temporal
 
 ## Usage
 
-See usage and examples on <https://registry.terraform.io/providers/PGBI/temporal>.
+See usage and examples on <https://registry.terraform.io/providers/stan-stately/temporal>.
+
+## Releasing
+- Push a git tag with the new version:
+```
+git checkout main
+git tag v1.1.1
+git push origin --tags
+```
 
 ### Dev tools
 

@@ -18,7 +18,7 @@ The Temporal Terraform Provider allows you to manage [Temporal](https://temporal
 terraform {
   required_providers {
     temporal = {
-      source  = "pgbi/temporal"
+      source  = "stately-stan/temporal"
       version = "0.1.2"
     }
   }
@@ -36,14 +36,14 @@ provider "temporal" {
 terraform {
   required_providers {
     temporal = {
-      source  = "pgbi/temporal"
+      source  = "stately-stan/temporal"
       version = "0.1.2"
     }
   }
 }
 
 provider "temporal" {
-  address   = "your-namespace.tmprl.cloud:7233"
+  address   = "us-west-2.aws.api.temporal.io:7233"
   namespace = "your-namespace"
   api_key   = var.temporal_api_key
   tls       = true
@@ -61,7 +61,7 @@ variable "temporal_api_key" {
 You can also use environment variables for configuration:
 
 ```bash
-export TEMPORAL_ADDRESS="your-namespace.tmprl.cloud:7233"
+export TEMPORAL_ADDRESS="us-west-2.aws.api.temporal.io:7233"
 export TEMPORAL_NAMESPACE="your-namespace"
 export TEMPORAL_API_KEY="your-api-key"
 export TLS="true"

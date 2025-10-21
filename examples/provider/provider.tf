@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     temporal = {
-      source  = "pgbi/temporal"
+      source  = "stately-stan/temporal"
       version = "0.1.2"
     }
   }

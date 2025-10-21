@@ -1,14 +1,14 @@
 terraform {
   required_providers {
     temporal = {
-      source  = "pgbi/temporal"
+      source  = "stately-stan/temporal"
       version = "0.1.2"
     }
   }
 }
 
 provider "temporal" {
-  address   = "your-namespace.tmprl.cloud:7233"
+  address   = "us-west-2.aws.api.temporal.io:7233"
   namespace = "your-namespace"
   api_key   = var.temporal_api_key
   tls       = true
