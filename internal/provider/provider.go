@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -24,21 +25,6 @@ import (
 var (
 	_ provider.Provider = &temporalProvider{}
 )
-
-// apiKeyCredentials implements credentials.PerRPCCredentials for API key authentication.
-type apiKeyCredentials struct {
-	apiKey string
-}
-
-func (c *apiKeyCredentials) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
-	return map[string]string{
-		"authorization": "Bearer " + c.apiKey,
-	}, nil
-}
-
-func (c *apiKeyCredentials) RequireTransportSecurity() bool {
-	return true
-}
 
 // temporalProviderModel maps provider schema data to a Go type.
 type temporalProviderModel struct {
@@ -139,10 +125,23 @@ func (p *temporalProvider) Configure(ctx context.Context, req provider.Configure
 		namespace = os.Getenv("TEMPORAL_NAMESPACE")
 	}
 
+	interceptors := []grpc.UnaryClientInterceptor{
+		func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			ctx = metadata.AppendToOutgoingContext(ctx, "temporal-namespace", namespace)
+			return invoker(ctx, method, req, reply, cc, opts...)
+		},
+	}
+
 	// Get API key from configuration or environment variable
 	apiKey := os.Getenv("TEMPORAL_API_KEY")
 	if !config.APIKey.IsNull() {
 		apiKey = config.APIKey.ValueString()
+		if apiKey != "" {
+			interceptors = append(interceptors, func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+				ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+apiKey)
+				return invoker(ctx, method, req, reply, cc, opts...)
+			})
+		}
 	}
 
 	// If any of the expected configurations are missing, return
@@ -165,16 +164,10 @@ func (p *temporalProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	// Configure gRPC dial options
-	var dialOptions []grpc.DialOption
-
-	// Add API key authentication if provided (for Temporal Cloud)
-	if apiKey != "" {
-		apiKeyCreds := &apiKeyCredentials{apiKey: apiKey}
-		dialOptions = append(dialOptions, grpc.WithPerRPCCredentials(apiKeyCreds))
-	}
+	dialOptions := []grpc.DialOption{grpc.WithChainUnaryInterceptor(interceptors...)}
 
 	// Add TLS if enabled or if API key is provided (API key requires TLS for security)
-	if tlsEnabled || apiKey != "" {
+	if tlsEnabled {
 		pool, err := x509.SystemCertPool()
 		if err != nil {
 			resp.Diagnostics.AddError("Couldn't load the system CA certificate pool", err.Error())

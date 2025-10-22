@@ -21,7 +21,6 @@ resource "temporal_schedule" "example" {
   catchup_window   = "3h"
 
   action {
-    workflow_id     = "exampleWorkflow-dailyRun"
     workflow_type   = "exampleWorkflow"
     task_queue_name = "example-task-queue"
     input_payload = jsonencode({
@@ -42,7 +41,7 @@ resource "temporal_schedule" "example" {
 					resource.TestCheckResourceAttr("temporal_schedule.example", "pause_on_failure", "true"),
 					resource.TestCheckResourceAttr("temporal_schedule.example", "overlap_policy", "skip"),
 					resource.TestCheckResourceAttr("temporal_schedule.example", "catchup_window", "3h"),
-					resource.TestCheckResourceAttr("temporal_schedule.example", "action.workflow_id", "exampleWorkflow-dailyRun"),
+					resource.TestCheckResourceAttrSet("temporal_schedule.example", "action.workflow_id"), // Auto-generated
 					resource.TestCheckResourceAttr("temporal_schedule.example", "action.workflow_type", "exampleWorkflow"),
 					resource.TestCheckResourceAttr("temporal_schedule.example", "action.task_queue_name", "example-task-queue"),
 					resource.TestCheckResourceAttr("temporal_schedule.example", "action.input_payload", "{\"myVar\":\"abc\"}"),
@@ -57,7 +56,6 @@ resource "temporal_schedule" "example" {
   name             = "Example Schedule"
 
   action {
-    workflow_id     = "exampleWorkflow-dailyRun"
     workflow_type   = "exampleWorkflow"
     task_queue_name = "example-task-queue"
   }
@@ -74,7 +72,38 @@ resource "temporal_schedule" "example" {
 					resource.TestCheckResourceAttr("temporal_schedule.example", "pause_on_failure", "false"),
 					resource.TestCheckResourceAttr("temporal_schedule.example", "overlap_policy", "skip"),
 					resource.TestCheckResourceAttr("temporal_schedule.example", "catchup_window", "365d"),
-					resource.TestCheckResourceAttr("temporal_schedule.example", "action.workflow_id", "exampleWorkflow-dailyRun"),
+					resource.TestCheckResourceAttrSet("temporal_schedule.example", "action.workflow_id"), // Auto-generated
+					resource.TestCheckResourceAttr("temporal_schedule.example", "action.workflow_type", "exampleWorkflow"),
+					resource.TestCheckResourceAttr("temporal_schedule.example", "action.task_queue_name", "example-task-queue"),
+					resource.TestCheckNoResourceAttr("temporal_schedule.example", "action.input_payload"),
+					resource.TestCheckResourceAttr("temporal_schedule.example", "spec.interval.0.every", "1d"),
+					resource.TestCheckResourceAttr("temporal_schedule.example", "spec.interval.0.offset", "0s"),
+				),
+			},
+			// Create and Read testing - auto-generated workflow_id
+			{
+				Config: testProviderConfig + `
+resource "temporal_schedule" "example" {
+  name             = "Example Schedule Auto ID"
+
+  action {
+    workflow_type   = "exampleWorkflow"
+    task_queue_name = "example-task-queue"
+  }
+
+  spec {
+    interval {
+      every  = "1d"
+    }
+  }
+}`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("temporal_schedule.example", "name", "Example Schedule Auto ID"),
+					resource.TestCheckResourceAttr("temporal_schedule.example", "is_paused", "false"),
+					resource.TestCheckResourceAttr("temporal_schedule.example", "pause_on_failure", "false"),
+					resource.TestCheckResourceAttr("temporal_schedule.example", "overlap_policy", "skip"),
+					resource.TestCheckResourceAttr("temporal_schedule.example", "catchup_window", "365d"),
+					resource.TestCheckResourceAttrSet("temporal_schedule.example", "action.workflow_id"), // Should be auto-generated
 					resource.TestCheckResourceAttr("temporal_schedule.example", "action.workflow_type", "exampleWorkflow"),
 					resource.TestCheckResourceAttr("temporal_schedule.example", "action.task_queue_name", "example-task-queue"),
 					resource.TestCheckNoResourceAttr("temporal_schedule.example", "action.input_payload"),

@@ -7,7 +7,6 @@ resource "temporal_schedule" "example" {
   catchup_window   = "3h"
 
   action {
-    workflow_id     = "exampleWorkflow-dailyRun"
     workflow_type   = "exampleWorkflow"
     task_queue_name = "example-task-queue"
     input_payload = jsonencode({
