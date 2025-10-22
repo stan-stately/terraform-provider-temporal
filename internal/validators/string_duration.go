@@ -2,41 +2,41 @@ package validators
 
 import (
 	"context"
-	"fmt"
-	"time"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
-// StringDurationValidator struct is now empty as AllowsEmpty was unused.
-type StringDurationValidator struct{}
+type StringDurationValidator struct {
+	AllowsEmpty bool
+}
 
 func (v StringDurationValidator) Description(ctx context.Context) string {
-	return "Ensures the string represents a valid Go duration."
+	return "Ensures the string represents a duration."
 }
 
 func (v StringDurationValidator) MarkdownDescription(ctx context.Context) string {
-	return "Ensures the string represents a valid Go duration. For example: `30s`, `5m`, `10h`."
+	return "Ensures the string represents a duration. E.g 30s, 5m, 10h or 8d."
 }
 
 func (v StringDurationValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-
 	attr, _ := req.Config.Schema.AttributeAtPath(ctx, req.Path)
 	if (attr.IsOptional() && req.ConfigValue.IsNull()) || req.ConfigValue.IsUnknown() {
 		return
 	}
-
-	value := req.ConfigValue.ValueString()
-
-	// Use Go's standard library to parse the duration.
-	// This is more robust and handles more formats than manual parsing.
-	_, err := time.ParseDuration(value)
-	if err != nil {
-		// Use AddAttributeError for more specific error messages tied to the attribute.
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Invalid Duration String",
-			fmt.Sprintf("The value '%s' is not a valid duration. Please use a format like '30s', '1.5h', or '10m'. Original error: %s", value, err),
-		)
+	durationStr := req.ConfigValue.ValueString()
+	if len(durationStr) >= 2 {
+		unit := string(durationStr[len(durationStr)-1])
+		valueStr := durationStr[:len(durationStr)-1]
+		_, err := strconv.Atoi(valueStr)
+		if err == nil {
+			if unit == "s" || unit == "m" || unit == "h" || unit == "d" {
+				return
+			}
+		}
 	}
+	resp.Diagnostics.AddError(
+		"Invalid Value at "+req.PathExpression.String(),
+		"The value must represent a duration. E.g 30s, 5m, 10h or 8d.",
+	)
 }
